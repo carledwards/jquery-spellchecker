@@ -29,6 +29,11 @@
       offset: 2,
       appendTo: null
     },
+    editBox: {
+      position: 'below',
+      offset: 2,
+      appendTo: null
+    },
     incorrectWords: {
       container: 'body', //selector
       position: null //function
@@ -103,7 +108,6 @@
   var selectWordHandler = function(handlerName) {
 
     return function(e) {
-    
       e.preventDefault();
       e.stopPropagation();
 
@@ -111,6 +115,18 @@
       var word = $.trim(element.data('word') || element.text());
 
       this.trigger(handlerName, e, word, element, this);
+
+    }.bind(this);
+  };  
+
+  var correctedWordHandler = function(handlerName) {
+
+    return function(e) {
+
+      var element = $(e.currentTarget);
+      var word = $.trim(element.val());
+
+      this.trigger(handlerName, e, word, this);
 
     }.bind(this);
   };  
@@ -240,6 +256,175 @@
     try {
       window.findAndReplaceDOMText.revert();
     } catch(e) {}
+  };
+
+  /* Edit box
+   *************************/
+  var EditBox = function(config, element) {
+    this.element = element;
+    if (config.editBox.appendTo) {
+      this.body = $(config.editBox.appendTo);
+    } else {
+      this.body = (this.element.length && this.element[0].nodeName === 'BODY') ? this.element : 'body';
+    }
+    this.position = $.isFunction(config.editBox.position) ? config.editBox.position : this.position;
+    Box.apply(this, arguments);
+  };
+  inherits(EditBox, Box);
+
+  EditBox.prototype.bindEvents = function() {
+    var click = 'click.' + pluginName;
+    this.container.on(click, this.onContainerClick.bind(this));
+    $('html').on(click, this.onWindowClick.bind(this));
+    if (this.element[0].nodeName === 'BODY') {
+      this.element.parent().on(click, this.onWindowClick.bind(this));
+    }
+    this.container.on('keyup.' + pluginName, '#editbox-input', this.onKeyup.bind(this));
+  };
+
+  EditBox.prototype.createBox = function() {
+
+    var local = this.config.local;
+
+    this.container = $([
+      '<div class="' + pluginName + '-editbox">',
+      '</div>'
+    ].join('')).appendTo(this.body);
+
+    var innerContainer = $([
+      '<div class="innerContainer">',
+      '</div>'
+    ].join('')).appendTo(this.container);
+
+    var table = $([
+      '<div class="rTable">',
+      '</div>'
+    ].join('')).prependTo(innerContainer);
+    var row = $([
+      '<div class="rTableRow">',
+      '</div>'
+    ].join('')).prependTo(table);
+    this.word = $([
+      '<div class="word">',
+      '</div>'
+    ].join('')).prependTo(row);
+
+    var table = $([
+      '<div class="rTable">',
+      '</div>'
+    ].join('')).prependTo(innerContainer);
+    var row = $([
+      '<div class="rTableRow">',
+      '</div>'
+    ].join('')).prependTo(table);
+    var cell = $([
+      '<div class="rTableCell">',
+      '</div>'
+    ].join('')).prependTo(row);
+    this.input = $([
+      '<div class="try-again">! try again</div>',
+    ].join('')).prependTo(cell);
+    var cell = $([
+      '<div class="rTableCell">',
+      '</div>'
+    ].join('')).prependTo(row);
+    this.input = $([
+      '<div><input id="editbox-input" type="text" autofocus></input></div>',
+    ].join('')).prependTo(cell);
+
+    this.label = $([
+      '<div class="rTable">',
+      '<div class="rTableRow">',
+      '<div class="label">',
+      'Type in the misspelled word correctly',
+      '</div>',
+      '</div>',
+      '</div>'
+    ].join('')).prependTo(innerContainer);
+
+  };
+
+  EditBox.prototype.onKeyup = function(e) {
+    if (e.keyCode == 13) {
+      if (this.correctWord === $('#editbox-input').val()) {
+        correctedWordHandler.call(this, 'corrected.word')(e);
+      }
+      else {
+        $('.try-again').show();
+      }
+    }
+  };
+
+  EditBox.prototype.position = function() {
+
+    var win = $(window);
+    var element = this.wordElement.data('firstElement') || this.wordElement;
+    var offset = element.offset();
+    var boxOffset = this.config.editBox.offset;
+    var containerHeight = this.container.outerHeight();
+
+    var positionAbove = (offset.top - containerHeight - boxOffset);
+    var positionBelow = (offset.top + element.outerHeight() + boxOffset);
+
+    var left = offset.left;
+    var top;
+
+    if (this.config.editBox.position === 'below') {
+      top = positionBelow;
+      if (win.height() + win.scrollTop() < positionBelow + containerHeight) {
+        top = positionAbove;
+      }
+    } else {
+      top = positionAbove;
+    }
+
+    this.container.css({ top: top, left: left });
+  };
+
+  EditBox.prototype.open = function() {
+    this.position();
+    $('.try-again').hide();
+    $('#editbox-input').val('');
+    this.container.fadeIn(180);
+    $('#editbox-input').focus();
+  };
+
+  EditBox.prototype.close = function() {
+    this.container.fadeOut(100, function(){
+    }.bind(this));
+  };
+
+  EditBox.prototype.detach = function() {
+    this.container = this.container.detach();
+  };
+
+  EditBox.prototype.reattach = function() {
+    this.container.appendTo(this.body);
+  };
+
+  EditBox.prototype.onContainerClick = function(e) {
+    e.stopPropagation();
+  };
+
+  EditBox.prototype.onWindowClick = function(e) {
+    this.close();
+  };
+
+  EditBox.prototype.onCorrectWord = function(words) {
+    this.position();
+    this.open();
+  };
+
+  EditBox.prototype.destroy = function() {
+    this.container.empty().remove();
+  };
+
+  EditBox.prototype.showCorrectTheWord = function(word, wordElement) {
+    this.correctWord = word;
+    this.word.html(word);
+    this.wordElement = $(wordElement);
+    this.position();
+    this.open();
   };
 
   /* Suggest box
@@ -406,7 +591,7 @@
         driver: config.webservice.driver
       },
       error: function() {
-        alert(config.local.requestError);
+//        alert(config.local.requestError);
       }.bind(this)
     };
   };
@@ -641,6 +826,7 @@
 
     if (this.elements.length) {
       this.setupSuggestBox();
+      this.setupEditBox();
       this.setupIncorrectWords();
       this.bindEvents();
     }
@@ -666,6 +852,24 @@
 
     this.on('destroy', function() {
         this.suggestBox.destroy();
+    }.bind(this));
+  };
+
+  SpellChecker.prototype.setupEditBox = function() {
+    
+    this.editBox = new EditBox(this.config, this.elements);
+    
+    this.on('replace.word.before', function() {
+      this.editBox.close();
+      this.editBox.detach();
+    }.bind(this));
+
+    this.on('replace.word', function() {
+      this.editBox.reattach();
+    }.bind(this));
+
+    this.on('destroy', function() {
+        this.editBox.destroy();
     }.bind(this));
   };
 
@@ -697,6 +901,7 @@
     this.suggestBox.on('ignore.word', this.onIgnoreWord.bind(this));
     this.suggestBox.on('select.word', this.onSelectWord.bind(this));
     this.incorrectWords.on('select.word', this.onIncorrectWordSelect.bind(this));
+    this.editBox.on('corrected.word', this.onCorrectedWord.bind(this));
   };
 
   /* Pubic API methods */
@@ -704,14 +909,23 @@
   SpellChecker.prototype.check = function(text, callback) {
     this.trigger('check.start');
     text = typeof text === 'string' ? this.parser.clean(text) : this.parser.getText(text || '', this.config.getText);
-    this.webservice.checkWords(text, this.onCheckWords(callback));
+    this.onCheckWords()({"data":[["mispell","consciencious","commited"]]})
   };
 
   SpellChecker.prototype.getSuggestions = function(word, callback) {
     if (this.suggestBox) {
       this.suggestBox.loading(true);
     }
-    this.webservice.getSuggestions(word, callback);
+    if (word === "commited") {
+      callback(["committed", "commuted", "commixed"])
+    }
+    else if (word === "consciencious") {
+    callback(["conscientious"])
+
+    }
+    else if (word === "mispell") {
+      callback(["misspell"])
+    }
   };
 
   SpellChecker.prototype.replaceWord = function(oldWord, replacement, elementOrText) {
@@ -771,6 +985,13 @@
 
   SpellChecker.prototype.onSelectWord = function(e, word, element) {
     e.preventDefault();
+    this.suggestBox.close();
+    this.editBox.showCorrectTheWord(word, this.suggestBox.wordElement);
+  };
+
+  SpellChecker.prototype.onCorrectedWord = function(e, word) {
+    e.preventDefault();
+    this.editBox.close();
     this.replaceWord(this.incorrectWord, word);
   };
 

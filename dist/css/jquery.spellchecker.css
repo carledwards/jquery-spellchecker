@@ -5,6 +5,17 @@
  * Copyright (c) 2012 Richard Willis
  * Licensed under the MIT license.
  */
+
+.rTable { 
+  display: table; 
+}
+.rTableRow { 
+  display: table-row; 
+}
+.rTableCell { 
+  display: table-cell; 
+}
+
 .spellchecker-suggestbox {
   position: absolute;
   display: none;
@@ -34,9 +45,47 @@
 .spellchecker-suggestbox .footer {
   border-top: 1px solid #ddd;
 }
+.spellchecker-suggestbox .footer .ignore-word,
 .spellchecker-suggestbox .footer .ignore-all,
 .spellchecker-suggestbox .footer .ignore-forever {
   display: none;
+}
+.spellchecker-editbox {
+  position: absolute;
+  display: none;
+  font: normal 13px arial;
+  box-shadow: 0 0 4px #aaa;
+  background: #eee;
+  border: 1px solid #bbb;
+  margin: 6px;
+}
+.spellchecker-editbox .innerContainer {
+  margin: 6px;
+}
+.spellchecker-editbox .label {
+  color: #333;
+  font-style: italic;
+}
+.spellchecker-editbox .word {
+  color: #333;
+  font: bold 14px arial;
+}
+.spellchecker-editbox .try-again {
+  display: inline-block;
+  position: relative;
+  font: normal 13px arial;
+  color: red;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  margin-left: 6px;
+  display: none;
+}
+.spellchecker-editbox input {
+  display: inline-block;
+  font: normal 13px arial;
+  border: 1px solid #ccc;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 .spellchecker-word-highlight {
   color: red;
